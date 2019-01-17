@@ -44,13 +44,14 @@ MyMessage childMaxYTWattMsg(MAXYTPOWER_ID,V_WATT);
 
 char receivedChars[buffsize];                       // 32 an array to store the received data
 char tempChars[buffsize];                           // 32 an array to manipulate the received data
-                                                    
-char value[num_keywords][value_bytes]       = {0};  // 19 * 32 The array that holds the verified data
 
-static byte blockindex = 0;
+long int value[num_keywords]      = {0};  // 19 * 32 The array that holds the verified data                                                    
+long int value_tmp[num_keywords]      = {0};  // 19 * 32 The array that holds the verified data                                                    
+long int value_old[num_keywords]      = {0};  // 19 * 32 The array that holds the verified data
+
 bool new_data = false;
 bool blockend = false;
-
+byte checksum = 0;
 
 void setup()
 {
@@ -59,28 +60,28 @@ void setup()
 
 void presentation()
 {
-  // Send the sketch version information to the gateway and Controller
-  sendSketchInfo(SKETCH_NAME, SKETCH_MAJOR_VER "." SKETCH_MINOR_VER);
+    // Send the sketch version information to the gateway and Controller
+    sendSketchInfo(SKETCH_NAME, SKETCH_MAJOR_VER "." SKETCH_MINOR_VER);
 
-  // Register this device as power sensor
-  present(BVOLT_ID, S_MULTIMETER);
-  delay(100);
-  present(BCURRENT_ID, S_MULTIMETER);
-  delay(100);
-  present(CS_ID, S_POWER);
-  delay(100);
-  present(VOLT_ID, S_MULTIMETER);
-  delay(100);
-  present(POWER_ID, S_POWER);
-  delay(100);
-  present(TDPOWER_ID, S_POWER);
-  delay(100);
-  present(MAXTDPOWER_ID, S_POWER);
-  delay(100);
-  present(YTPOWER_ID, S_POWER);
-  delay(100);
-  present(MAXYTPOWER_ID, S_POWER);
-  delay(100);
+    // Register this device as power sensor
+    present(BVOLT_ID, S_MULTIMETER);
+    delay(100);
+    present(BCURRENT_ID, S_MULTIMETER);
+    delay(100);
+    present(CS_ID, S_POWER);
+    delay(100);
+    present(VOLT_ID, S_MULTIMETER);
+    delay(100);
+    present(POWER_ID, S_POWER);
+    delay(100);
+    present(TDPOWER_ID, S_POWER);
+    delay(100);
+    present(MAXTDPOWER_ID, S_POWER);
+    delay(100);
+    present(YTPOWER_ID, S_POWER);
+    delay(100);
+    present(MAXYTPOWER_ID, S_POWER);
+    delay(100);
 
 }
 
@@ -98,6 +99,8 @@ void RecvWithEndMarker() {
 
     while (victronSerial.available() > 0 && new_data == false) {
         rc = victronSerial.read();
+        checksum += rc;
+
         if (rc != endMarker) {
             receivedChars[ndx] = rc;
             ndx++;
@@ -132,24 +135,36 @@ void ParseData() {
     if (strcmp(strtokIndxLabel, "Checksum") == 0) {
         blockend = true;
     }
-    
 
-    if (blockend) {
+    if (!blockend ) {
         // Mettre la valeur en cours dans values
         for (int i = 0; i < num_keywords; ++i) {
-          if (strcmp(strtokIndxLabel, keywords[i]) == 0) {
-            // found the label, copy it to the value array
-            strtokIndxValue = strtok(NULL, "\r");
-            if (strtokIndxValue != NULL) {
-              strcpy(value[i], strtokIndxValue);
+            if (strcmp(strtokIndxLabel, keywords[i]) == 0) {
+                // found the label, copy it to the value array
+                strtokIndxValue = strtok(NULL, "\r");
+                if (strtokIndxValue != NULL) {
+                    value_tmp[i]=atol(strtokIndxValue);
+                }
+                break;
             }
-            break;
-          }
+        }
+        
+    }
+    else
+    {
+        if(!checksum)
+        {
+            copy(begin(value_tmp), end(value_tmp), begin(value));
+            SendMySensorData();
+        }
+        else
+        {
+            copy(begin(value), end(value), begin(value_tmp));
         }
  
         // Reset the block index, and make sure we clear blockend.
         blockend = false;
-        SendMySensorData();
+        checksum = 0;
     }
 }
 
@@ -164,21 +179,58 @@ void SendMySensorData() {
 
 void PrintValues() {
   
-  float Batt_V = roundf(atol(value[V]) * 100) / 100;
-  send(childBVoltMsg.set(Batt_V,2));
-  
-  float Batt_I = roundf(atol(value[I]) * 100) / 100;
-  send(childBCurrentMsg.set(Batt_I,2));
+  float Batt_V = roundf(value[V] / 10.00f) / 100;
+  float Batt_V_old = roundf(value_old[V] / 10.00f) / 100;
+  if(Batt_V!= Batt_V_old)
+  {
+    send(childBVoltMsg.set(Batt_V,2));
+    value_old[V]=value[V];
+  }
 
-  float Panel_V = roundf(atol(value[VPV]) * 100) / 100;
-  send(childVoltMsg.set(Panel_V,2));
+  float Batt_I = roundf(value[I] / 10.00f) / 100;
+  float Batt_I_old = roundf(value_old[I] / 10.00f) / 100;  
+  if(Batt_I!= Batt_I_old)
+  {
+    send(childBCurrentMsg.set(Batt_I,2));
+    value_old[I]=value[I];
+  }
+
+  float Panel_V = roundf(value[VPV] / 10.00f) / 100;
+  float Panel_V_old = roundf(value_old[VPV] / 10.00f) / 100;
+  if(Panel_V!= Panel_V_old)
+  {
+    send(childVoltMsg.set(Panel_V,2));
+    value_old[VPV]=value[VPV];
+  }
   
-  send(childWattMsg.set(atol(value[PPV])));
-  
-  send(childBCSMsg.set(atol(value[CS])));
-  
-  send(childTDWattMsg.set(atol(value[H20])*10));
-  send(childMaxTDWattMsg.set(atol(value[H21])));
-  send(childYTWattMsg.set(atol(value[H22])*10));
-  send(childMaxYTWattMsg.set(atol(value[H23])));
+  if(value[PPV]!= value_old[PPV])
+  {
+    send(childWattMsg.set(value[PPV]));
+    value_old[PPV]=value[PPV];
+  }
+  if(value[CS]!= value_old[CS])
+  {
+    send(childBCSMsg.set(value[CS]));
+    value_old[CS]=value[CS];
+  }
+  if(value[H20]!= value_old[H20])
+  {
+    send(childTDWattMsg.set(value[H20]*10));
+    value_old[H20]=value[H20];
+  }
+  if(value[H21]!= value_old[H21])
+  {
+    send(childMaxTDWattMsg.set(value[H21]));
+    value_old[H21]=value[H21];
+  }
+  if(value[H22]!= value_old[H22])
+  {
+    send(childYTWattMsg.set(value[H22])*10);
+    value_old[H22]=value[H22];
+  }
+  if(value[H23]!= value_old[H23])
+  {
+    send(childMaxYTWattMsg.set(value[H23]));
+    value_old[H23]=value[H23];
+  }
 }
