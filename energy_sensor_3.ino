@@ -133,13 +133,13 @@ void ParseData() {
         blockend = true;
     }
     
-    strtokIndxValue = strtok(NULL, "\r");
 
     if (blockend) {
         // Mettre la valeur en cours dans values
         for (int i = 0; i < num_keywords; ++i) {
           if (strcmp(strtokIndxLabel, keywords[i]) == 0) {
             // found the label, copy it to the value array
+            strtokIndxValue = strtok(NULL, "\r");
             if (strtokIndxValue != NULL) {
               strcpy(value[i], strtokIndxValue);
             }
