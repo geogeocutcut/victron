@@ -24,7 +24,7 @@
 #define YTPOWER_ID 8              // Id of the sensor child
 #define MAXYTPOWER_ID 9              // Id of the sensor child
 
-//uint32_t SLEEP_TIME = 30000; // Minimum time between send (in milliseconds). We don't want to spam the gateway.
+uint32_t TEMPO_TIME = 10000; // Minimum time between send (in milliseconds). We don't want to spam the gateway.
 
 #include <MySensors.h>
 #include <SoftwareSerial.h>
@@ -45,9 +45,9 @@ MyMessage childMaxYTWattMsg(MAXYTPOWER_ID,V_WATT);
 char receivedChars[buffsize];                       // 32 an array to store the received data
 char tempChars[buffsize];                           // 32 an array to manipulate the received data
 
-int32_t value[num_keywords]      = {0};  // 19 * 32 The array that holds the verified data                                                    
-int32_t value_tmp[num_keywords]      = {0};  // 19 * 32 The array that holds the verified data                                                    
-int32_t value_old[num_keywords]      = {0};  // 19 * 32 The array that holds the verified data
+int32_t value[num_keywords]      = {0};                                                  
+int32_t value_tmp[num_keywords]      = {0};                                              
+int32_t value_old[num_keywords]      = {0};
 
 bool new_data = false;
 bool blockend = false;
@@ -127,7 +127,7 @@ void HandleNewData() {
 }
 
 void ParseData() {
-    char *strtokIndxLabel; // this is used by strtok() as an index
+    char *strtokIndxLabel; 
     char *strtokIndxValue;
     
     strtokIndxLabel = strtok(tempChars,"\t");      // get the first part - the label
@@ -137,10 +137,9 @@ void ParseData() {
     }
 
     if (!blockend ) {
-        // Mettre la valeur en cours dans values
+        // found the label, copy it to the value array
         for (int i = 0; i < num_keywords; ++i) {
             if (strcmp(strtokIndxLabel, keywords[i]) == 0) {
-                // found the label, copy it to the value array
                 strtokIndxValue = strtok(NULL, "\r");
                 if (strtokIndxValue != NULL) {
                     value_tmp[i]=atol(strtokIndxValue);
@@ -164,8 +163,6 @@ void ParseData() {
             for(int i=0; i<num_keywords; ++i)
               value_tmp[i] = value[i];
         }
- 
-        // Reset the block index, and make sure we clear blockend.
         blockend = false;
         checksum = 0;
     }
@@ -173,7 +170,7 @@ void ParseData() {
 
 void SendMySensorData() {
     static unsigned long prev_millis;
-    if (millis() - prev_millis > 10000) {
+    if (millis() - prev_millis > TEMPO_TIME) {
         PrintValues();
         prev_millis = millis();
     }
@@ -184,7 +181,7 @@ void PrintValues() {
   
   float Batt_V = roundf(value[V] / 10.00f) / 100;
   float Batt_V_old = roundf(value_old[V] / 10.00f) / 100;
-  if(Batt_V!= Batt_V_old || true)
+  if(Batt_V!= Batt_V_old)
   {
     send(childBVoltMsg.set(Batt_V,2));
     value_old[V]=value[V];
@@ -192,7 +189,7 @@ void PrintValues() {
 
   float Batt_I = roundf(value[I] / 10.00f) / 100;
   float Batt_I_old = roundf(value_old[I] / 10.00f) / 100;  
-  if(Batt_I!= Batt_I_old || true)
+  if(Batt_I!= Batt_I_old)
   {
     send(childBCurrentMsg.set(Batt_I,2));
     value_old[I]=value[I];
