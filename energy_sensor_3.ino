@@ -45,9 +45,9 @@ MyMessage childMaxYTWattMsg(MAXYTPOWER_ID,V_WATT);
 char receivedChars[buffsize];                       // 32 an array to store the received data
 char tempChars[buffsize];                           // 32 an array to manipulate the received data
 
-long int value[num_keywords]      = {0};  // 19 * 32 The array that holds the verified data                                                    
-long int value_tmp[num_keywords]      = {0};  // 19 * 32 The array that holds the verified data                                                    
-long int value_old[num_keywords]      = {0};  // 19 * 32 The array that holds the verified data
+int32_t value[num_keywords]      = {0};  // 19 * 32 The array that holds the verified data                                                    
+int32_t value_tmp[num_keywords]      = {0};  // 19 * 32 The array that holds the verified data                                                    
+int32_t value_old[num_keywords]      = {0};  // 19 * 32 The array that holds the verified data
 
 bool new_data = false;
 bool blockend = false;
@@ -127,8 +127,8 @@ void HandleNewData() {
 }
 
 void ParseData() {
-    char * strtokIndxLabel; // this is used by strtok() as an index
-    char * strtokIndxValue;
+    char *strtokIndxLabel; // this is used by strtok() as an index
+    char *strtokIndxValue;
     
     strtokIndxLabel = strtok(tempChars,"\t");      // get the first part - the label
     // The last field of a block is always the Checksum
@@ -154,12 +154,15 @@ void ParseData() {
     {
         if(!checksum)
         {
-            copy(begin(value_tmp), end(value_tmp), begin(value));
+            for(int i=0; i<num_keywords; ++i)
+              value[i] = value_tmp[i];
+            
             SendMySensorData();
         }
         else
         {
-            copy(begin(value), end(value), begin(value_tmp));
+            for(int i=0; i<num_keywords; ++i)
+              value_tmp[i] = value[i];
         }
  
         // Reset the block index, and make sure we clear blockend.
@@ -181,7 +184,7 @@ void PrintValues() {
   
   float Batt_V = roundf(value[V] / 10.00f) / 100;
   float Batt_V_old = roundf(value_old[V] / 10.00f) / 100;
-  if(Batt_V!= Batt_V_old)
+  if(Batt_V!= Batt_V_old || true)
   {
     send(childBVoltMsg.set(Batt_V,2));
     value_old[V]=value[V];
@@ -189,7 +192,7 @@ void PrintValues() {
 
   float Batt_I = roundf(value[I] / 10.00f) / 100;
   float Batt_I_old = roundf(value_old[I] / 10.00f) / 100;  
-  if(Batt_I!= Batt_I_old)
+  if(Batt_I!= Batt_I_old || true)
   {
     send(childBCurrentMsg.set(Batt_I,2));
     value_old[I]=value[I];
@@ -225,7 +228,7 @@ void PrintValues() {
   }
   if(value[H22]!= value_old[H22])
   {
-    send(childYTWattMsg.set(value[H22])*10);
+    send(childYTWattMsg.set(value[H22]*10));
     value_old[H22]=value[H22];
   }
   if(value[H23]!= value_old[H23])
