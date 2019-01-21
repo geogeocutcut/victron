@@ -25,6 +25,7 @@
 #define MAXYTPOWER_ID 9              // Id of the sensor child
 
 uint32_t TEMPO_TIME = 10000; // Minimum time between send (in milliseconds). We don't want to spam the gateway.
+uint32_t ALL_TEMPO_TIME = 300000;
 
 #include <MySensors.h>
 #include <SoftwareSerial.h>
@@ -170,7 +171,12 @@ void ParseData() {
 
 void SendMySensorData() {
     static unsigned long prev_millis;
-    if (millis() - prev_millis > TEMPO_TIME) {
+    static unsigned long prev_all_millis;
+    if(millis() - prev_all_millis > ALL_TEMPO_TIME) {
+        PrintAllValues();
+        prev_all_millis = millis();
+    }
+    else if (millis() - prev_millis > TEMPO_TIME) {
         PrintValues();
         prev_millis = millis();
     }
@@ -233,4 +239,37 @@ void PrintValues() {
     send(childMaxYTWattMsg.set(value[H23]));
     value_old[H23]=value[H23];
   }
+}
+
+void PrintAllValues() {
+  
+  float Batt_V = roundf(value[V] / 10.00f) / 100;
+  send(childBVoltMsg.set(Batt_V,2));
+  value_old[V]=value[V];
+
+  float Batt_I = roundf(value[I] / 10.00f) / 100;
+  send(childBCurrentMsg.set(Batt_I,2));
+  value_old[I]=value[I];
+
+  float Panel_V = roundf(value[VPV] / 10.00f) / 100;
+  send(childVoltMsg.set(Panel_V,2));
+  value_old[VPV]=value[VPV];
+  
+  send(childWattMsg.set(value[PPV]));
+  value_old[PPV]=value[PPV];
+  
+  send(childBCSMsg.set(value[CS]));
+  value_old[CS]=value[CS];
+  
+  send(childTDWattMsg.set(value[H20]*10));
+  value_old[H20]=value[H20];
+
+  send(childMaxTDWattMsg.set(value[H21]));
+  value_old[H21]=value[H21];
+  
+  send(childYTWattMsg.set(value[H22]*10));
+  value_old[H22]=value[H22];
+  
+  send(childMaxYTWattMsg.set(value[H23]));
+  value_old[H23]=value[H23];
 }
