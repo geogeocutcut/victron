@@ -27,7 +27,9 @@
 
 uint32_t TEMPO_TIME = 10000; // Minimum time between send (in milliseconds). We don't want to spam the gateway.
 uint32_t MIDDLE_TEMPO_TIME = 180000; // Minimum time between send (in milliseconds). We don't want to spam the gateway.
-uint32_t ALL_TEMPO_TIME = 300000; // Minimum time between send (in milliseconds). We don't want to spam the gateway.
+uint32_t ALL_TEMPO_TIME = 900000; // Minimum time between send (in milliseconds). We don't want to spam the gateway.
+
+#define MY_NODE_ID 1
 
 #include <MySensors.h>
 #include <SoftwareSerial.h>

@@ -25,8 +25,11 @@
 #define MAXYTPOWER_ID 9              // Id of the sensor child
 
 uint32_t TEMPO_TIME = 10000; // Minimum time between send (in milliseconds). We don't want to spam the gateway.
-uint32_t ALL_TEMPO_TIME = 36000000;
 uint32_t MIDDLE_TEMPO_TIME = 300000;
+uint32_t ALL_TEMPO_TIME = 3600000;
+
+#define MY_REPEATER_FEATURE
+#define MY_NODE_ID 2
 
 #include <MySensors.h>
 #include <SoftwareSerial.h>
